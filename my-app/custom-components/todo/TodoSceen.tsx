@@ -56,8 +56,6 @@ const TodoScreen: React.FC<Props> = ({ navigation }) => {
         Alert.alert('Error', 'User not authenticated');
         return;
       }
-      
-      // Create the query based on the current sort option
       const q = query(
         collection(db, 'todos'),
         where('userId', '==', user.uid),
@@ -70,10 +68,10 @@ const TodoScreen: React.FC<Props> = ({ navigation }) => {
       querySnapshot.forEach((doc) => {
         const data = doc.data();
         todoList.push({
-          id: doc.id,
-          title: data.title,
-          description: data.description,
-          status: data.status,
+          taskId: doc.id,
+          taskTitle: data.title,
+          taskDescription: data.description,
+          taskStatus: data.status,
           userId: data.userId,
           createdAt: data.createdAt,
           reminderTime: data.reminderTime,
@@ -109,10 +107,9 @@ const TodoScreen: React.FC<Props> = ({ navigation }) => {
         updatedAt: Timestamp.now()
       });
       
-      // Update local state
       setTodos(prevTodos => 
         prevTodos.map(todo => 
-          todo.id === id ? { ...todo, status: newStatus as 'COMPLETED' | 'INCOMPLETE' } : todo
+          todo.taskId === id ? { ...todo, status: newStatus as 'COMPLETED' | 'INCOMPLETE' } : todo
         )
       );
     } catch (error) {
@@ -134,7 +131,7 @@ const TodoScreen: React.FC<Props> = ({ navigation }) => {
             try {
               await deleteDoc(doc(db, 'todos', id));
               // Update local state
-              setTodos(prevTodos => prevTodos.filter(todo => todo.id !== id));
+              setTodos(prevTodos => prevTodos.filter(todo => todo.taskId !== id));
             } catch (error) {
               console.error("Error deleting task: ", error);
               Alert.alert('Error', 'Failed to delete task');
@@ -154,12 +151,12 @@ const TodoScreen: React.FC<Props> = ({ navigation }) => {
       <View style={styles.todoItem}>
         <TouchableOpacity 
           style={styles.statusButton}
-          onPress={() => toggleTaskStatus(item.id, item.status)}
+          onPress={() => toggleTaskStatus(item.taskId, item.taskStatus)}
         >
           <Ionicons 
-            name={item.status === 'COMPLETED' ? 'checkmark-circle' : 'ellipse-outline'} 
+            name={item.taskStatus === 'COMPLETED' ? 'checkmark-circle' : 'ellipse-outline'} 
             size={24} 
-            color={item.status === 'COMPLETED' ? '#4CAF50' : '#757575'} 
+            color={item.taskStatus === 'COMPLETED' ? '#4CAF50' : '#757575'} 
           />
         </TouchableOpacity>
         
@@ -170,14 +167,14 @@ const TodoScreen: React.FC<Props> = ({ navigation }) => {
           <Text 
             style={[
               styles.todoTitle,
-              item.status === 'COMPLETED' && styles.completedText
+              item.taskStatus === 'COMPLETED' && styles.completedText
             ]}
             numberOfLines={1}
           >
-            {item.title}
+            {item.taskTitle}
           </Text>
           <Text style={styles.todoDescription} numberOfLines={1}>
-            {item.description || 'No description'}
+            {item.taskDescription || 'No description'}
           </Text>
           <View style={styles.todoMeta}>
             <Ionicons name="time-outline" size={14} color="#757575" />
@@ -187,7 +184,7 @@ const TodoScreen: React.FC<Props> = ({ navigation }) => {
         
         <TouchableOpacity 
           style={styles.deleteButton}
-          onPress={() => deleteTask(item.id)}
+          onPress={() => deleteTask(item.taskId)}
         >
           <Ionicons name="trash-outline" size={24} color="#FF5252" />
         </TouchableOpacity>
@@ -237,7 +234,7 @@ const TodoScreen: React.FC<Props> = ({ navigation }) => {
         <FlatList
           data={todos}
           renderItem={renderTodoItem}
-          keyExtractor={item => item.id}
+          keyExtractor={item => item.taskId}
           contentContainerStyle={styles.todoList}
         />
       ) : (
@@ -249,7 +246,7 @@ const TodoScreen: React.FC<Props> = ({ navigation }) => {
       
       <TouchableOpacity 
         style={styles.fab}
-        onPress={() => navigation.navigate('AddTodo')}
+        onPress={() => navigation.navigate('AddTodoScreen')}
       >
         <Ionicons name="add" size={24} color="white" />
       </TouchableOpacity>

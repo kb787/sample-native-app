@@ -7,15 +7,17 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import LoginScreen from '@/custom-components/auth/LoginScreen'
 import RegisterScreen from '@/custom-components/auth/RegisterScreen'
+import TodoScreen from '@/custom-components/todo/TodoSceen';
+import AddTodoScreen from '@/custom-components/todo/AddToDo';
 const Stack = createStackNavigator();
 
 export default function HomeScreen() {
   return (
-    <Stack.Navigator initialRouteName="LoginScreen">
-      {/* <Stack.Screen name="Homepage" component={Homepage} /> */}
+    <Stack.Navigator initialRouteName="TodoScreen">
       <Stack.Screen name="LoginScreen" component={LoginScreen} />
       <Stack.Screen name="RegisterScreen" component={RegisterScreen} />
-  
+      <Stack.Screen name="TodoScreen" component={TodoScreen} />
+      <Stack.Screen name="AddTodoScreen" component={AddTodoScreen} /> 
     </Stack.Navigator>
   );
 }
