@@ -1,5 +1,3 @@
-
-
 import React, { useState } from 'react';
 import { 
   View, 
@@ -35,6 +33,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
     try {
       setLoading(true);
       await signInWithEmailAndPassword(auth, email, password);
+      navigation.navigate('TodoScreen');
       // No need to navigate as App.tsx will handle this based on auth state
     } catch (error) {
       let errorMessage = 'Login failed';

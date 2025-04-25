@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   View,
@@ -15,6 +14,7 @@ import { auth, db } from '@/firebaseConfig';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '@/app/types/index';
 import { Ionicons } from '@expo/vector-icons';
+import { scheduleNotification } from '@/app/src/utils/notifications';
 
 type AddTodoScreenNavigationProp = StackNavigationProp<RootStackParamList, 'AddTodo'>;
 
@@ -26,7 +26,7 @@ const AddTodoScreen: React.FC<Props> = ({ navigation }) => {
   const [title, setTitle] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [date, setDate] = useState<string>(''); // Date in string format (YYYY-MM-DD)
-  const [time, setTime] = useState<string>(''); // Time in string format (HH:mm)
+  const [time, setTime] = useState<string>(''); // Time in string format (e.g., 7.10 for 7:10)
   const [reminderEnabled, setReminderEnabled] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -34,6 +34,33 @@ const AddTodoScreen: React.FC<Props> = ({ navigation }) => {
     if (title.trim() === '') {
       Alert.alert('Error', 'Please enter a task title');
       return;
+    }
+
+    if (reminderEnabled) {
+      // Validate date format
+      if (!date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        Alert.alert('Error', 'Invalid date format. Use YYYY-MM-DD.');
+        return;
+      }
+
+      // Validate and convert time format
+      let formattedTime = time.replace('.', ':'); // Replace '.' with ':'
+      if (!formattedTime.match(/^\d{1,2}:\d{2}$/)) {
+        Alert.alert('Error', 'Invalid time format. Use H.MM or HH.MM.');
+        return;
+      }
+
+      // Combine date and time into a single Date object
+      const reminderDateTime = new Date(`${date}T${formattedTime}`);
+      if (isNaN(reminderDateTime.getTime())) {
+        Alert.alert('Error', 'Invalid date or time. Please check your inputs.');
+        return;
+      }
+
+      if (reminderDateTime <= new Date()) {
+        Alert.alert('Error', 'Reminder date and time must be in the future.');
+        return;
+      }
     }
 
     try {
@@ -45,8 +72,9 @@ const AddTodoScreen: React.FC<Props> = ({ navigation }) => {
         return;
       }
 
-      // Combine date and time into a single Date object
-      const reminderDateTime = reminderEnabled && date && time ? new Date(`${date}T${time}`) : null;
+      const reminderDateTime = reminderEnabled && date && time
+        ? new Date(`${date}T${time.replace('.', ':')}`)
+        : null;
 
       const todoData = {
         title: title.trim(),
@@ -58,8 +86,15 @@ const AddTodoScreen: React.FC<Props> = ({ navigation }) => {
       };
 
       const docRef = await addDoc(collection(db, 'todos'), todoData);
-
-      navigation.goBack();
+      navigation.navigate('TodoScreen');
+      if (reminderEnabled && reminderDateTime && reminderDateTime > new Date()) {
+        await scheduleNotification(
+          docRef.id,
+          title,
+          description || 'Time to complete your task!',
+          reminderDateTime
+        );
+      }
     } catch (error) {
       console.error('Error adding task: ', error);
       Alert.alert('Error', 'Failed to add task');
@@ -121,10 +156,10 @@ const AddTodoScreen: React.FC<Props> = ({ navigation }) => {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Select Time (HH:mm)</Text>
+              <Text style={styles.label}>Select Time (H.MM or HH.MM)</Text>
               <TextInput
                 style={styles.input}
-                placeholder="HH:mm"
+                placeholder="H.MM or HH.MM"
                 value={time}
                 onChangeText={setTime}
                 keyboardType="numeric"

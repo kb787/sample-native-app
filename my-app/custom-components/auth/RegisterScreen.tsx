@@ -45,6 +45,8 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
     try {
       setLoading(true);
       await createUserWithEmailAndPassword(auth, email, password);
+      navigation.navigate('LoginScreen');
+      
     } catch (error) {
       let errorMessage = 'Registration failed';
       const authError = error as AuthError;
@@ -86,7 +88,6 @@ const RegisterScreen: React.FC<Props> = ({ navigation }) => {
           onChangeText={setPassword}
           secureTextEntry
         />
-        
         <TextInput
           style={styles.input}
           placeholder="Confirm Password"

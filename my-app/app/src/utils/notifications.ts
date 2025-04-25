@@ -57,28 +57,28 @@ export async function configureNotifications(): Promise<void> {
 }
 
 // Schedule a notification for a task
-// export async function scheduleNotification(
-//   id: string,
-//   title: string,
-//   body: string,
-//   date: Date
-// ): Promise<string> {
-//   // Make sure permissions are granted
-//   await registerForPushNotificationsAsync();
+export async function scheduleNotification(
+  id: string,
+  title: string,
+  body: string,
+  date: Date
+): Promise<string> {
+  // Make sure permissions are granted
+  await registerForPushNotificationsAsync();
 
-//   // Schedule the notification
-//   const identifier = await Notifications.scheduleNotificationAsync({
-//     content: {
-//       title,
-//       body,
-//       data: { id },
-//     },
-//     trigger: { type: 'timeInterval',seconds: 60, repeats: true }
-  
-//   });
-
-//   return identifier;
-// }
+  // Schedule the notification
+  const identifier = await Notifications.scheduleNotificationAsync({
+    content: {
+      title,
+      body,
+      data: { id },
+    },
+    trigger: {
+      date, // Repeat the notification
+    },
+  });
+  return identifier;
+}
 
 // Cancel a scheduled notification
 export async function cancelNotification(id: string): Promise<void> {

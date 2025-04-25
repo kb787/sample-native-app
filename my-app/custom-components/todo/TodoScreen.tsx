@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   View, 
@@ -91,6 +90,7 @@ const TodoScreen: React.FC<Props> = ({ navigation }) => {
   const handleLogout = async () => {
     try {
       await signOut(auth);
+      navigation.navigate("LoginScreen")
       // Navigation will be handled by App.tsx
     } catch (error) {
       Alert.alert('Error', 'Failed to log out');
@@ -130,6 +130,7 @@ const TodoScreen: React.FC<Props> = ({ navigation }) => {
           onPress: async () => {
             try {
               await deleteDoc(doc(db, 'todos', id));
+              setLoading(true);
               // Update local state
               setTodos(prevTodos => prevTodos.filter(todo => todo.taskId !== id));
             } catch (error) {
@@ -162,7 +163,7 @@ const TodoScreen: React.FC<Props> = ({ navigation }) => {
         
         <TouchableOpacity 
           style={styles.todoContent}
-          onPress={() => navigation.navigate('EditTodo', { todo: item })}
+          onPress={() => navigation.navigate('EditTodoScreen', { todo: item })}
         >
           <Text 
             style={[
