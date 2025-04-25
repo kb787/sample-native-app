@@ -16,5 +16,5 @@ export type RootStackParamList = {
   SignUp: undefined;
   TodoList: undefined;
   AddTodo: undefined;
-  EditTodo:undefined;
+  EditTodo: { todo: TodoItem };
 };
