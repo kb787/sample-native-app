@@ -76,7 +76,7 @@ const EditTodoScreen: React.FC<Props> = ({ navigation, route }) => {
       }
   
       try {
-        setLoading(true);
+        // setLoading(true);
         const todoRef = doc(db, 'todos', todo.taskId);
   
         // Prepare update data
@@ -85,7 +85,7 @@ const EditTodoScreen: React.FC<Props> = ({ navigation, route }) => {
           description: description.trim(),
           updatedAt: Timestamp.fromDate(new Date()),
         };
-  
+        navigation.navigate('TodoScreen');
         // Handle reminder changes
         if (reminderEnabled) {
           const reminderDateTime = new Date(`${date}T${time.replace('.', ':')}`);
@@ -93,7 +93,7 @@ const EditTodoScreen: React.FC<Props> = ({ navigation, route }) => {
         } else {
           updateData.reminderTime = null;
         }
-  
+        
         await updateDoc(todoRef, updateData);
   
         if (reminderEnabled && date && time) {
@@ -121,8 +121,6 @@ const EditTodoScreen: React.FC<Props> = ({ navigation, route }) => {
             console.log('No notification to cancel');
           }
         }
-  
-        navigation.navigate('TodoScreen');
       } catch (error) {
         console.error('Error updating task: ', error);
         Alert.alert('Error', 'Failed to update task');

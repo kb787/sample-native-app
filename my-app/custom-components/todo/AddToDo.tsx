@@ -35,47 +35,43 @@ const AddTodoScreen: React.FC<Props> = ({ navigation }) => {
       Alert.alert('Error', 'Please enter a task title');
       return;
     }
-
+  
     if (reminderEnabled) {
-      // Validate date format
       if (!date.match(/^\d{4}-\d{2}-\d{2}$/)) {
         Alert.alert('Error', 'Invalid date format. Use YYYY-MM-DD.');
         return;
       }
-
-      // Validate and convert time format
-      let formattedTime = time.replace('.', ':'); // Replace '.' with ':'
+  
+      let formattedTime = time.replace('.', ':');
       if (!formattedTime.match(/^\d{1,2}:\d{2}$/)) {
         Alert.alert('Error', 'Invalid time format. Use H.MM or HH.MM.');
         return;
       }
-
-      // Combine date and time into a single Date object
+  
       const reminderDateTime = new Date(`${date}T${formattedTime}`);
       if (isNaN(reminderDateTime.getTime())) {
         Alert.alert('Error', 'Invalid date or time. Please check your inputs.');
         return;
       }
-
+  
       if (reminderDateTime <= new Date()) {
         Alert.alert('Error', 'Reminder date and time must be in the future.');
         return;
       }
     }
-
+  
     try {
-      setLoading(true);
+      setLoading(true); // Start loading when request begins
+  
       const user = auth.currentUser;
-
       if (!user) {
         Alert.alert('Error', 'User not authenticated');
         return;
-      }
-
+      }  
       const reminderDateTime = reminderEnabled && date && time
         ? new Date(`${date}T${time.replace('.', ':')}`)
         : null;
-
+  
       const todoData = {
         title: title.trim(),
         description: description.trim(),
@@ -84,7 +80,7 @@ const AddTodoScreen: React.FC<Props> = ({ navigation }) => {
         createdAt: Timestamp.fromDate(new Date()),
         reminderTime: reminderDateTime ? Timestamp.fromDate(reminderDateTime) : null,
       };
-
+  
       const docRef = await addDoc(collection(db, 'todos'), todoData);
       navigation.navigate('TodoScreen');
       if (reminderEnabled && reminderDateTime && reminderDateTime > new Date()) {
@@ -102,6 +98,7 @@ const AddTodoScreen: React.FC<Props> = ({ navigation }) => {
       setLoading(false);
     }
   };
+  
 
   return (
     <ScrollView style={styles.container}>
