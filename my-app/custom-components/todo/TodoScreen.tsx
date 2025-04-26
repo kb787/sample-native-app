@@ -51,37 +51,87 @@ const TodoScreen: React.FC<Props> = ({ navigation }) => {
   };
   useFocusEffect(
     React.useCallback(() => {
+      setTodos([]); // Clear existing todos before fetching new ones
       fetchTodos();
       return () => {};
     }, [sortOption])
   );
 
+  // const fetchTodos = async (lastDoc?: any) => {
+  //   try {
+  //     setLoading(true);
+  //     const user = auth.currentUser;
+
+  //     if (!user) {
+  //       Alert.alert("Error", "User not authenticated");
+  //       return;
+  //     }
+
+  //     // Added pagination with limit and startAfter
+  //     let q = query(
+  //       collection(db, "todos"),
+  //       where("userId", "==", user.uid),
+  //       orderBy(sortOption, "asc")
+  //       // Fetch 10 tasks at a time
+  //     );
+
+  //     if (lastDoc) {
+  //       q = query(q, lastDoc);
+  //     }
+
+  //     const querySnapshot = await getDocs(q);
+  //     const todoList: TodoItem[] = [];
+  //     let lastFetchedDoc = null;
+
+  //     querySnapshot.forEach((doc) => {
+  //       const data = doc.data();
+  //       todoList.push({
+  //         taskId: doc.id,
+  //         taskTitle: data.title,
+  //         taskDescription: data.description,
+  //         taskStatus: data.status,
+  //         userId: data.userId,
+  //         createdAt: data.createdAt,
+  //         reminderTime: data.reminderTime,
+  //         updatedAt: data.updatedAt,
+  //       });
+  //       lastFetchedDoc = doc; // Track the last document for pagination
+  //     });
+
+  //     setTodos((prevTodos) => [...prevTodos, ...todoList]); // Append new tasks to the existing list
+  //     setLastVisible(lastFetchedDoc); // Update the last visible document
+  //   } catch (error) {
+  //     console.error("Error fetching todos: ", error);
+  //     Alert.alert("Error", "Failed to load tasks");
+  //   } finally {
+  //     setLoading(false);
+  //     setRefreshing(false);
+  //   }
+  // };
   const fetchTodos = async (lastDoc?: any) => {
     try {
       setLoading(true);
       const user = auth.currentUser;
-
+  
       if (!user) {
         Alert.alert("Error", "User not authenticated");
         return;
       }
-
-      // Added pagination with limit and startAfter
+  
       let q = query(
         collection(db, "todos"),
         where("userId", "==", user.uid),
         orderBy(sortOption, "asc")
-        // Fetch 10 tasks at a time
       );
-
+  
       if (lastDoc) {
         q = query(q, lastDoc);
       }
-
+  
       const querySnapshot = await getDocs(q);
       const todoList: TodoItem[] = [];
       let lastFetchedDoc = null;
-
+  
       querySnapshot.forEach((doc) => {
         const data = doc.data();
         todoList.push({
@@ -94,11 +144,18 @@ const TodoScreen: React.FC<Props> = ({ navigation }) => {
           reminderTime: data.reminderTime,
           updatedAt: data.updatedAt,
         });
-        lastFetchedDoc = doc; // Track the last document for pagination
+        lastFetchedDoc = doc;
       });
-
-      setTodos((prevTodos) => [...prevTodos, ...todoList]); // Append new tasks to the existing list
-      setLastVisible(lastFetchedDoc); // Update the last visible document
+  
+      // Apply duplicate prevention here
+      setTodos((prevTodos) => {
+        const newTodos = lastDoc ? [...prevTodos, ...todoList] : todoList;
+        return newTodos.filter(
+          (todo, index, self) => index === self.findIndex((t) => t.taskId === todo.taskId)
+        );
+      });
+  
+      setLastVisible(lastFetchedDoc);
     } catch (error) {
       console.error("Error fetching todos: ", error);
       Alert.alert("Error", "Failed to load tasks");
@@ -107,7 +164,6 @@ const TodoScreen: React.FC<Props> = ({ navigation }) => {
       setRefreshing(false);
     }
   };
-
   const handleLoadMore = async () => {
     if (!loading && lastVisible) {
       await fetchTodos(lastVisible); // Fetch the next batch of tasks
@@ -124,48 +180,6 @@ const TodoScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
  
-  // const toggleTaskStatus = (id: string, currentStatus: string) => {
-  //   const confirmToggle = async () => {
-  //     try {
-  //       setLoading(true); // Show loading indicator
-        
-  //       const todoRef = doc(db, "todos", id);
-  //       const newStatus = currentStatus === "COMPLETED" ? "INCOMPLETE" : "COMPLETED";
-  
-  //       await updateDoc(todoRef, {
-  //         status: newStatus,
-  //         updatedAt: Timestamp.now(),
-  //       });
-  
-  //       // Update the local state immediately for better UX
-  //       setTodos((todos) =>
-  //         todos.map((todo) =>
-  //           todo.taskId === id
-  //             ? {
-  //                 ...todo,
-  //                 taskStatus: newStatus as "COMPLETED" | "INCOMPLETE",
-  //               }
-  //             : todo
-  //         )
-  //       );
-  //     } catch (error) {
-  //       console.error("Error updating task status: ", error);
-  //       Alert.alert("Error", "Failed to update task status");
-  //     } finally {
-  //       setLoading(false); // Hide loading indicator
-  //     }
-  //   };
-  
-  //   Alert.alert(
-  //     "Update Status",
-  //     "Are you sure you want to update task status?",
-  //     [
-  //       { text: "Cancel", style: "cancel" },
-  //       { text: "Update", style: "default", onPress: confirmToggle },
-  //     ]
-  //   );
-  // };
-
   const toggleTaskStatus = async (id: string, currentStatus: string) => {
     try {
       // Immediately update local state for responsive UI
@@ -349,10 +363,6 @@ const TodoScreen: React.FC<Props> = ({ navigation }) => {
           maxToRenderPerBatch={10} // Render 10 items per batch
           windowSize={5} // Keep 5 items in memory
           removeClippedSubviews={true}
-          // refreshControl={
-          //   <RefreshControl refreshing={refreshing} onRefresh={handleRefreshing} /> // Added RefreshControl
-          // }
-          // Remove items outside the viewport
         />
       ) : (
         <View style={styles.emptyContainer}>

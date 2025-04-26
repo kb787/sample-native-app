@@ -16,7 +16,11 @@
       "googleServicesFile": "./app/google-services.json"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.myapp.example",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "web": {
       "bundler": "metro",
@@ -37,6 +41,14 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "e4a5e6b8-56dd-4d5d-80d7-e4e28ff0d9e3"
+      }
     }
   }
 }

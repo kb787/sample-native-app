@@ -56,7 +56,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
       style={styles.container}
     >
       <View style={styles.formContainer}>
-        <Text style={styles.title}>Welcome to TodoApp</Text>
+        <Text style={styles.title}>Welcome to Todo-App</Text>
         
         <TextInput
           style={styles.input}
