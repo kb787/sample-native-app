@@ -54,15 +54,14 @@ const AddTodoScreen: React.FC<Props> = ({ navigation }) => {
         return;
       }
   
-      if (reminderDateTime <= new Date()) {
+      if (reminderDateTime < new Date()) {
         Alert.alert('Error', 'Reminder date and time must be in the future.');
         return;
       }
     }
-  
+    navigation.navigate('TodoScreen');
     try {
-      setLoading(true); // Start loading when request begins
-  
+      //setLoading(true);  Start loading when request begins
       const user = auth.currentUser;
       if (!user) {
         Alert.alert('Error', 'User not authenticated');
@@ -82,7 +81,6 @@ const AddTodoScreen: React.FC<Props> = ({ navigation }) => {
       };
   
       const docRef = await addDoc(collection(db, 'todos'), todoData);
-      navigation.navigate('TodoScreen');
       if (reminderEnabled && reminderDateTime && reminderDateTime > new Date()) {
         await scheduleNotification(
           docRef.id,
@@ -142,7 +140,7 @@ const AddTodoScreen: React.FC<Props> = ({ navigation }) => {
         {reminderEnabled && (
           <View style={styles.datePickerContainer}>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Select Date (YYYY-MM-DD)</Text>
+              <Text style={styles.label}>Enter Date (YYYY-MM-DD)</Text>
               <TextInput
                 style={styles.input}
                 placeholder="YYYY-MM-DD"
@@ -153,7 +151,7 @@ const AddTodoScreen: React.FC<Props> = ({ navigation }) => {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Select Time (H.MM or HH.MM)</Text>
+              <Text style={styles.label}>Enter Time (H.MM or HH.MM) in 24hr format</Text>
               <TextInput
                 style={styles.input}
                 placeholder="H.MM or HH.MM"

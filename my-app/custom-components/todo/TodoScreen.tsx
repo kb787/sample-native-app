@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { signOut } from "firebase/auth";
@@ -39,12 +40,15 @@ type Props = {
 const TodoScreen: React.FC<Props> = ({ navigation }) => {
   const [todos, setTodos] = useState<TodoItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
   const [sortOption, setSortOption] = useState<"createdAt" | "reminderTime">(
     "createdAt"
   );
   const [lastVisible, setLastVisible] = useState<any>(null); // Added for pagination
-
-  // Load todos when screen focuses
+  const handleRefreshing = async () => {
+    setRefreshing(true);
+    await fetchTodos();
+  };
   useFocusEffect(
     React.useCallback(() => {
       fetchTodos();
@@ -66,8 +70,8 @@ const TodoScreen: React.FC<Props> = ({ navigation }) => {
       let q = query(
         collection(db, "todos"),
         where("userId", "==", user.uid),
-        orderBy(sortOption, "asc"),
-      // Fetch 10 tasks at a time
+        orderBy(sortOption, "asc")
+        // Fetch 10 tasks at a time
       );
 
       if (lastDoc) {
@@ -100,6 +104,7 @@ const TodoScreen: React.FC<Props> = ({ navigation }) => {
       Alert.alert("Error", "Failed to load tasks");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -118,69 +123,133 @@ const TodoScreen: React.FC<Props> = ({ navigation }) => {
       Alert.alert("Error", "Failed to log out");
     }
   };
+ 
+  // const toggleTaskStatus = (id: string, currentStatus: string) => {
+  //   const confirmToggle = async () => {
+  //     try {
+  //       setLoading(true); // Show loading indicator
+        
+  //       const todoRef = doc(db, "todos", id);
+  //       const newStatus = currentStatus === "COMPLETED" ? "INCOMPLETE" : "COMPLETED";
+  
+  //       await updateDoc(todoRef, {
+  //         status: newStatus,
+  //         updatedAt: Timestamp.now(),
+  //       });
+  
+  //       // Update the local state immediately for better UX
+  //       setTodos((todos) =>
+  //         todos.map((todo) =>
+  //           todo.taskId === id
+  //             ? {
+  //                 ...todo,
+  //                 taskStatus: newStatus as "COMPLETED" | "INCOMPLETE",
+  //               }
+  //             : todo
+  //         )
+  //       );
+  //     } catch (error) {
+  //       console.error("Error updating task status: ", error);
+  //       Alert.alert("Error", "Failed to update task status");
+  //     } finally {
+  //       setLoading(false); // Hide loading indicator
+  //     }
+  //   };
+  
+  //   Alert.alert(
+  //     "Update Status",
+  //     "Are you sure you want to update task status?",
+  //     [
+  //       { text: "Cancel", style: "cancel" },
+  //       { text: "Update", style: "default", onPress: confirmToggle },
+  //     ]
+  //   );
+  // };
 
-  const toggleTaskStatus = (id: string, currentStatus: string) => {
+  const toggleTaskStatus = async (id: string, currentStatus: string) => {
+    try {
+      // Immediately update local state for responsive UI
+      const newStatus = currentStatus === "COMPLETED" ? "INCOMPLETE" : "COMPLETED";
+      
+      // Optimistic UI update
+      setTodos(prevTodos =>
+        prevTodos.map(todo =>
+          todo.taskId === id
+            ? { ...todo, taskStatus: newStatus as "COMPLETED" | "INCOMPLETE" }
+            : todo
+        )
+      );
+  
+      // Update in Firestore
+      const todoRef = doc(db, "todos", id);
+      await updateDoc(todoRef, {
+        status: newStatus,
+        updatedAt: Timestamp.now(),
+      });
+  
+    } catch (error) {
+      console.error("Error updating task status: ", error);
+      
+      // Revert optimistic update if there was an error
+      setTodos(prevTodos =>
+        prevTodos.map(todo =>
+          todo.taskId === id
+            ? { ...todo, taskStatus: currentStatus as "COMPLETED" | "INCOMPLETE" }
+            : todo
+        )
+      );
+      
+      Alert.alert("Error", "Failed to update task status");
+    }
+  };
+  
+  // Usage with confirmation dialog:
+  const handleStatusToggle = (id: string, currentStatus: string) => {
     Alert.alert(
       "Update Status",
       "Are you sure you want to update task status?",
       [
         { text: "Cancel", style: "cancel" },
-        {
-          text: "Update",
-          style: "default",   // default style for positive action
-          onPress: async () => {
-            try {
-              const todoRef = doc(db, "todos", id);
-              const newStatus = currentStatus === "COMPLETED" ? "INCOMPLETE" : "COMPLETED";
-  
-              await updateDoc(todoRef, {
-                status: newStatus,
-                updatedAt: Timestamp.now(),
-              });
-  
-              setTodos((prevTodos) =>
-                prevTodos.map((todo) =>
-                  todo.taskId === id
-                    ? {
-                        ...todo,
-                        taskStatus: newStatus as "COMPLETED" | "INCOMPLETE",
-                      }
-                    : todo
-                )
-              );
-  
-              navigation.navigate("TodoScreen");
-            } catch (error) {
-              console.error("Error updating task status: ", error);
-              Alert.alert("Error", "Failed to update task status");
-            }
-          },
+        { 
+          text: "Update", 
+          style: "default", 
+          onPress: () => toggleTaskStatus(id, currentStatus) 
         },
       ]
     );
   };
+  const deleteTask = (id: string) => {
+    const confirmDelete = async () => {
+      try {
+        setLoading(true); // Show loading indicator
+        
+        await deleteDoc(doc(db, "todos", id));
+        
+        // Update the local state immediately for better UX
+        setTodos((todos) => {
+          return todos.filter((todo) => todo.taskId !== id)
+      });
+
+        
+        // Optional: refresh the list to ensure consistency with server
+        // await fetchTodos();
+      } catch (error) {
+        console.error("Error deleting task: ", error);
+        Alert.alert("Error", "Failed to delete task");
+      } finally {
+        setLoading(false); // Hide loading indicator
+      }
+    };
   
-  const deleteTask = async (id: string) => {
     Alert.alert("Delete Task", "Are you sure you want to delete this task?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete",
         style: "destructive",
-        onPress: async () => {
-          try {
-            await deleteDoc(doc(db, "todos", id));
-            setTodos((prevTodos) =>
-              prevTodos.filter((todo) => todo.taskId !== id)
-            );
-          } catch (error) {
-            console.error("Error deleting task: ", error);
-            Alert.alert("Error", "Failed to delete task");
-          }
-        },
+        onPress: confirmDelete,
       },
     ]);
   };
-
   const renderTodoItem = ({ item }: { item: TodoItem }) => {
     const formattedDate = item.reminderTime
       ? format(item.reminderTime.toDate(), "MMM d, yyyy h:mm a")
@@ -190,7 +259,7 @@ const TodoScreen: React.FC<Props> = ({ navigation }) => {
       <View style={styles.todoItem}>
         <TouchableOpacity
           style={styles.statusButton}
-          onPress={() => toggleTaskStatus(item.taskId, item.taskStatus)}
+          onPress={() => handleStatusToggle(item.taskId, item.taskStatus)}
         >
           <Ionicons
             name={
@@ -225,12 +294,6 @@ const TodoScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.deleteButton}
-          onPress={() => deleteTask(item.taskId)}
-        >
-          <Ionicons name="trash-outline" size={24} color="#FF5252" />
-        </TouchableOpacity>
       </View>
     );
   };
@@ -285,7 +348,11 @@ const TodoScreen: React.FC<Props> = ({ navigation }) => {
           initialNumToRender={10} // Render only 10 items initially
           maxToRenderPerBatch={10} // Render 10 items per batch
           windowSize={5} // Keep 5 items in memory
-          removeClippedSubviews={true} // Remove items outside the viewport
+          removeClippedSubviews={true}
+          // refreshControl={
+          //   <RefreshControl refreshing={refreshing} onRefresh={handleRefreshing} /> // Added RefreshControl
+          // }
+          // Remove items outside the viewport
         />
       ) : (
         <View style={styles.emptyContainer}>
@@ -301,6 +368,7 @@ const TodoScreen: React.FC<Props> = ({ navigation }) => {
         <Ionicons name="add" size={24} color="white" />
       </TouchableOpacity>
     </View>
+  
   );
 };
 
@@ -419,8 +487,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#757575",
   },
+  overlayLoading: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    zIndex: 1000,
+  }
 });
 
 export default TodoScreen;
-
-
